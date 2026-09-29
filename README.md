@@ -1,7 +1,17 @@
+<p align="center">
+  <img src="client/public/logoyep.jpeg" alt="YojanaSetu Logo" width="220" />
+</p>
+
 # YojanaSetu (योजनासेतु)
 ### AI-Powered Government Scheme Eligibility & Benefit Assistant
 
 > **Bridging the gap between citizens, small businesses, and government schemes through intelligent document verification, deterministic rule execution, and transparent benefit guidance.**
+
+---
+
+<p align="center">
+  <img src="client/public/frontend.jpeg" alt="YojanaSetu Frontend Interface Preview" width="100%" />
+</p>
 
 ---
 
