@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import type { Scheme } from './types';
 import EligibilityBadge from '../../components/ui/EligibilityBadge';
-import { Scale, CheckCircle2, XCircle, X, ExternalLink, ArrowRight, Sparkles } from 'lucide-react';
+import { scoreSchemesForComparison } from './compareRanking';
+import { Scale, CheckCircle2, XCircle, X, ExternalLink, ArrowRight, Trophy, Zap, FileCheck2 } from 'lucide-react';
 
 interface SchemeComparisonTableProps {
   schemes: Scheme[];
@@ -20,6 +21,19 @@ const SchemeComparisonTable = ({
 
   const comparedSchemes = schemes.filter((s) => comparisonSchemeIds.includes(s.id));
   const remainingSchemes = schemes.filter((s) => !comparisonSchemeIds.includes(s.id));
+
+  const scores = comparedSchemes.length >= 2 ? scoreSchemesForComparison(comparedSchemes) : [];
+  const bestScore = scores.length
+    ? scores.reduce((top, current) => (current.compositeScore > top.compositeScore ? current : top))
+    : null;
+  const leadDays = (processingTime: string) => {
+    const match = processingTime.match(/\d+/);
+    return match ? Number(match[0]) : 0; // no number found (e.g. "Instant e-card issue") == fastest possible
+  };
+  const fastestProcessingId = comparedSchemes.length >= 2
+    ? comparedSchemes.reduce((fastest, s) => (leadDays(s.processingTime) < leadDays(fastest.processingTime) ? s : fastest)).id
+    : null;
+  const scoreFor = (schemeId: string) => scores.find((s) => s.schemeId === schemeId);
 
   return (
     <div className="space-y-8 pb-12 max-w-6xl mx-auto">
@@ -89,10 +103,22 @@ const SchemeComparisonTable = ({
                       Comparison Criteria
                     </th>
                     {comparedSchemes.map((s) => (
-                      <th key={s.id} className="py-4 px-4 min-w-[240px] max-w-[280px] align-top">
+                      <th
+                        key={s.id}
+                        className={`py-4 px-4 min-w-[240px] max-w-[280px] align-top ${
+                          bestScore?.schemeId === s.id ? 'bg-amber-50/70' : ''
+                        }`}
+                      >
                         <div className="space-y-2">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-[10px] font-mono text-slate-500 uppercase">{s.level}</span>
+                            {bestScore?.schemeId === s.id ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded">
+                                <Trophy className="w-3 h-3" />
+                                Most Beneficial
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-mono text-slate-500 uppercase">{s.level}</span>
+                            )}
                             <button
                               onClick={() => removeFromComparison(s.id)}
                               className="text-slate-400 hover:text-rose-600 p-0.5"
@@ -283,38 +309,93 @@ const SchemeComparisonTable = ({
             </div>
           </div>
 
-          {/* WHICH SCHEME FITS WHICH NEED? (EDITORIAL VALUE GUIDANCE) */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 space-y-4">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-600" />
-              <h2 className="text-sm font-semibold text-slate-900">
-                Which scheme fits which need? (Objective Analysis)
-              </h2>
+          {comparedSchemes.length === 1 && (
+            <div className="text-center py-6 bg-slate-50 border border-dashed border-slate-300 rounded-xl text-xs text-slate-500">
+              Add at least one more scheme above to see a "Most Beneficial" comparison.
             </div>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              We do not declare an arbitrary single "winner" because welfare eligibility depends on individual situational trade-offs:
-            </p>
+          )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-1">
-              <div className="p-4 bg-white rounded-lg border border-slate-200 space-y-2">
-                <span className="font-bold text-slate-900 block">
-                  For Daily Accommodation & Living Allowance:
-                </span>
-                <p className="text-slate-600 leading-relaxed">
-                  <strong>Dr. Babasaheb Ambedkar Swadhar Yojana</strong> directly deposits ₹51,000–₹60,000 into the student's personal account for meal and room expenses when government hostels are full.
-                </p>
+          {/* MOST BENEFICIAL SCHEME — COMPUTED ANALYSIS */}
+          {bestScore && (
+            <div className="bg-gradient-to-br from-amber-50 via-white to-white border border-amber-200 rounded-xl p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-amber-600" />
+                <h2 className="text-sm font-semibold text-slate-900">Most Beneficial Scheme</h2>
               </div>
 
-              <div className="p-4 bg-white rounded-lg border border-slate-200 space-y-2">
-                <span className="font-bold text-slate-900 block">
-                  For College Tuition & Institutional Reimbursement:
-                </span>
-                <p className="text-slate-600 leading-relaxed">
-                  <strong>Centrally Sponsored Post-Matric Scholarship</strong> directly reimburses college semester fees and provides academic book maintenance stipends without hostel stipulations.
-                </p>
+              {(() => {
+                const winner = comparedSchemes.find((s) => s.id === bestScore.schemeId)!;
+                return (
+                  <>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      Weighing eligibility fit, ease of application, and benefit value (loans discounted since they're
+                      repayable, not free money),{' '}
+                      <strong className="text-slate-900">{winner.shortName}</strong> comes out ahead for your profile
+                      with a composite score of{' '}
+                      <span className="font-mono font-semibold text-amber-800">{bestScore.compositeScore}/100</span>.
+                    </p>
+
+                    <div className="grid grid-cols-3 gap-3 text-xs pt-1">
+                      <div className="p-3 bg-white rounded-lg border border-slate-200">
+                        <span className="text-[10px] text-slate-500 uppercase font-semibold block">Eligibility Fit</span>
+                        <span className="font-mono font-bold text-slate-900">{bestScore.eligibilityScore}%</span>
+                      </div>
+                      <div className="p-3 bg-white rounded-lg border border-slate-200">
+                        <span className="text-[10px] text-slate-500 uppercase font-semibold block">Ease of Access</span>
+                        <span className="font-mono font-bold text-slate-900">{bestScore.easeScore}%</span>
+                      </div>
+                      <div className="p-3 bg-white rounded-lg border border-slate-200">
+                        <span className="text-[10px] text-slate-500 uppercase font-semibold block">
+                          {bestScore.isRepayable ? 'Loan Value' : 'Benefit Value'}
+                        </span>
+                        <span className="font-mono font-bold text-slate-900">
+                          {bestScore.benefitValue !== null ? `₹${bestScore.benefitValue.toLocaleString('en-IN')}` : 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+
+              {/* Per-scheme standout callouts */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
+                {comparedSchemes.map((s) => {
+                  const score = scoreFor(s.id);
+                  if (!score) return null;
+                  return (
+                    <div key={s.id} className="p-3 bg-white rounded-lg border border-slate-200 space-y-1">
+                      <span className="font-semibold text-slate-900 block truncate">{s.shortName}</span>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {score.schemeId === bestScore.schemeId && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded">
+                            <Trophy className="w-3 h-3" />
+                            Most beneficial overall
+                          </span>
+                        )}
+                        {s.id === fastestProcessingId && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-sky-800 bg-sky-50 px-1.5 py-0.5 rounded">
+                            <Zap className="w-3 h-3" />
+                            Fastest processing
+                          </span>
+                        )}
+                        {s.documents.length > 0 && s.documents.every((d) => d.isAvailable) && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded">
+                            <FileCheck2 className="w-3 h-3" />
+                            All documents ready
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+
+              <p className="text-[11px] text-slate-500 pt-1">
+                This ranking is a computed guide based on your profile and the scheme rules above — not an official
+                legal recommendation. Review the full eligibility criteria before applying.
+              </p>
             </div>
-          </div>
+          )}
 
         </div>
       )}
