@@ -13,18 +13,17 @@ import {
   Lock,
   ChevronRight,
   Sparkles,
+  Trophy,
 } from 'lucide-react';
 
 interface HomeDashboardViewProps {
-  schemes: Scheme[];
+  recommended: Scheme[];
   applications: ApplicationRecord[];
 }
 
-const HomeDashboardView = ({ schemes, applications }: HomeDashboardViewProps) => {
+const HomeDashboardView = ({ recommended, applications }: HomeDashboardViewProps) => {
   const { t, userProfile, addToComparison, isInComparison } = useApp();
   const navigate = useNavigate();
-
-  const recommended = schemes.slice(0, 4);
 
   if (!userProfile) return null;
 
@@ -208,13 +207,22 @@ const HomeDashboardView = ({ schemes, applications }: HomeDashboardViewProps) =>
               Matched against your profile rules · Verified as of September 2026
             </p>
           </div>
-          <button
-            onClick={() => navigate('/schemes')}
-            className="text-xs font-semibold text-brand-700 hover:text-brand-900 flex items-center gap-1"
-          >
-            <span>View All Schemes (12)</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/schemes/best')}
+              className="text-xs font-semibold text-amber-800 hover:text-amber-900 flex items-center gap-1"
+            >
+              <Trophy className="w-3.5 h-3.5" />
+              <span>Find My Best Match</span>
+            </button>
+            <button
+              onClick={() => navigate('/schemes')}
+              className="text-xs font-semibold text-brand-700 hover:text-brand-900 flex items-center gap-1"
+            >
+              <span>View All Schemes (12)</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -9,6 +9,8 @@ import {
   UserCheck,
   ChevronRight,
   Cpu,
+  Trophy,
+  ArrowRight,
 } from 'lucide-react';
 
 interface FindSchemesSearchProps {
@@ -64,13 +66,24 @@ const FindSchemesSearch = ({ userProfile }: FindSchemesSearchProps) => {
     <div className="space-y-8 pb-12 max-w-5xl mx-auto">
 
       {/* Top Header */}
-      <div className="space-y-1">
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900">
-          Find Government Schemes & Welfare Policies
-        </h1>
-        <p className="text-sm text-slate-600">
-          Search over 120 verified Central and Maharashtra Government welfare programs using criteria or conversational intent.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900">
+            Find Government Schemes & Welfare Policies
+          </h1>
+          <p className="text-sm text-slate-600">
+            Search over 120 verified Central and Maharashtra Government welfare programs using criteria or conversational intent.
+          </p>
+        </div>
+
+        <button
+          onClick={() => navigate('/schemes/best')}
+          className="shrink-0 px-4 py-2.5 text-xs font-semibold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-200 rounded-lg transition-colors flex items-center gap-2"
+        >
+          <Trophy className="w-4 h-4" />
+          <span>Skip to my single best match</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
       </div>
 
       {/* AI SCHEME DISCOVERY CARD */}

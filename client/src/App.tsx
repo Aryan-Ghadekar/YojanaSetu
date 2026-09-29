@@ -7,6 +7,7 @@ import Landing from './pages/LandingPage/Landing';
 import Login from './pages/LoginPage/Login';
 import Home from './pages/HomePage/Home';
 import FindSchemes from './pages/FindSchemesPage/FindSchemes';
+import BestMatch from './pages/BestMatchPage/BestMatch';
 import SchemeResults from './pages/SchemeResultsPage/SchemeResults';
 import SchemeDetails from './pages/SchemeDetailsPage/SchemeDetails';
 import SchemeComparison from './pages/SchemeComparisonPage/SchemeComparison';
@@ -35,6 +36,7 @@ export default function App() {
             <Route element={<MainLayout />}>
               <Route path="/home" element={<Home />} />
               <Route path="/schemes" element={<FindSchemes />} />
+              <Route path="/schemes/best" element={<BestMatch />} />
               <Route path="/schemes/results" element={<SchemeResults />} />
               <Route path="/schemes/compare" element={<SchemeComparison />} />
               <Route path="/schemes/:schemeId" element={<SchemeDetails />} />

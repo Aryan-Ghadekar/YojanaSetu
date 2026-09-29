@@ -10,3 +10,7 @@ export const fetchSchemeById = async (id: string): Promise<Scheme | undefined> =
     return undefined;
   }
 };
+
+/** Top eligible schemes for the signed-in user, ranked by match status then match score. */
+export const fetchRecommendedSchemes = (limit = 3): Promise<Scheme[]> =>
+  apiGet<Scheme[]>(`/api/schemes/recommended?limit=${limit}`);

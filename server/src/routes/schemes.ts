@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { supabaseAdmin } from '../lib/supabaseAdmin.js';
-import { optionalAuth } from '../middleware/auth.js';
+import { optionalAuth, requireAuth } from '../middleware/auth.js';
 import { computeEligibility, type ProfileRow, type SchemeRow } from '../lib/eligibility.js';
 
 export const schemesRouter = Router();
@@ -119,6 +119,40 @@ schemesRouter.get('/', optionalAuth, async (req, res) => {
   const { profile, documentCategories } = await loadProfileAndDocs(req.user?.id);
   const schemes = (data as SchemeDbRow[]).map((row) => toCamelScheme(row, profile, documentCategories));
   res.json(schemes);
+});
+
+const MATCH_STATUS_RANK: Record<string, number> = {
+  'Strong match': 3,
+  'Potential match': 2,
+  Borderline: 1,
+  'Not currently eligible': 0,
+};
+
+schemesRouter.get('/recommended', requireAuth, async (req, res) => {
+  const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? '3'), 10) || 3, 1), 10);
+
+  const { data, error } = await supabaseAdmin.from('schemes').select('*').order('name');
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+
+  const { profile, documentCategories } = await loadProfileAndDocs(req.user!.id);
+  if (!profile) {
+    res.status(400).json({ error: 'Complete your citizen profile to get personalized scheme recommendations.' });
+    return;
+  }
+
+  const ranked = (data as SchemeDbRow[])
+    .map((row) => toCamelScheme(row, profile, documentCategories))
+    .filter((scheme) => scheme.matchStatus !== 'Not currently eligible')
+    .sort((a, b) => {
+      const statusDelta = MATCH_STATUS_RANK[b.matchStatus] - MATCH_STATUS_RANK[a.matchStatus];
+      if (statusDelta !== 0) return statusDelta;
+      return b.matchScore - a.matchScore;
+    });
+
+  res.json(ranked.slice(0, limit));
 });
 
 schemesRouter.get('/:id', optionalAuth, async (req, res) => {
