@@ -1,0 +1,6 @@
+{
+  "name": "YojanaSetu - Citizen Policy & Welfare Discovery",
+  "description": "Discover government schemes, verify documents, compare benefits, assess eligibility, and get guided application assistance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
