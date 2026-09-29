@@ -16,3 +16,7 @@ export const submitApplication = (scheme: SubmitApplicationInput): Promise<Appli
 
 export const resolveApplicationAction = (app: ApplicationRecord): Promise<ApplicationRecord> =>
   apiPost<ApplicationRecord>(`/api/applications/${app.id}/resolve`);
+
+/** Advances the application to its next pipeline stage, simulating a poll against the issuing portal. */
+export const checkApplicationStatus = (app: ApplicationRecord): Promise<ApplicationRecord> =>
+  apiPost<ApplicationRecord>(`/api/applications/${app.id}/check-status`);

@@ -112,6 +112,96 @@ applicationsRouter.post('/', requireAuth, async (req, res) => {
   res.status(201).json(toCamelApplication(data as ApplicationDbRow));
 });
 
+const STAGE_STATUS_MAP: Array<{ match: RegExp; status: string }> = [
+  { match: /verification/i, status: 'Documents Verified' },
+  { match: /approval/i, status: 'Department Review' },
+  { match: /sanction/i, status: 'Approved' },
+  { match: /credit|disbursement|disbursal/i, status: 'Disbursed' },
+];
+
+function statusForStage(stage: string): string {
+  return STAGE_STATUS_MAP.find(({ match }) => match.test(stage))?.status ?? 'Department Review';
+}
+
+applicationsRouter.post('/:id/check-status', requireAuth, async (req, res) => {
+  const { data: existing, error: fetchError } = await supabaseAdmin
+    .from('applications')
+    .select('*')
+    .eq('id', req.params.id)
+    .eq('user_id', req.user!.id)
+    .maybeSingle();
+
+  if (fetchError) {
+    res.status(500).json({ error: fetchError.message });
+    return;
+  }
+  if (!existing) {
+    res.status(404).json({ error: 'Application not found' });
+    return;
+  }
+
+  const row = existing as ApplicationDbRow;
+
+  if (row.current_status === 'Action Required') {
+    res.status(409).json({ error: 'Resolve the pending action before checking for further updates.' });
+    return;
+  }
+  if (row.current_status === 'Disbursed') {
+    res.json(toCamelApplication(row));
+    return;
+  }
+
+  const currentIndex = row.timeline.findIndex((step) => step.status === 'current');
+  if (currentIndex === -1) {
+    res.json(toCamelApplication(row));
+    return;
+  }
+
+  const today = formatToday();
+  const completedStage = row.timeline[currentIndex];
+  const nextIndex = currentIndex + 1;
+  const isFinalStage = nextIndex >= row.timeline.length;
+
+  const timeline = row.timeline.map((step, idx) => {
+    if (idx === currentIndex) {
+      return { ...step, status: 'completed' as const, date: today, note: `Verified and cleared on ${today}` };
+    }
+    if (idx === nextIndex) {
+      return {
+        ...step,
+        status: 'current' as const,
+        date: isFinalStage ? today : 'In Progress',
+        note: isFinalStage ? 'Benefit credited to your Aadhaar-linked bank account' : `Now underway following ${completedStage.stage}`,
+      };
+    }
+    return step;
+  });
+
+  const nextStage = row.timeline[nextIndex];
+  const newStatus = isFinalStage ? 'Disbursed' : statusForStage(nextStage.stage);
+
+  const { data, error } = await supabaseAdmin
+    .from('applications')
+    .update({
+      current_status: newStatus,
+      current_step_index: Math.min(row.current_step_index + 1, row.total_steps),
+      last_updated: today,
+      expected_next_step: isFinalStage
+        ? 'Benefit disbursed — no further action needed'
+        : `${nextStage.stage}: ${nextStage.note}`,
+      timeline,
+    })
+    .eq('id', row.id)
+    .select('*')
+    .single();
+
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json(toCamelApplication(data as ApplicationDbRow));
+});
+
 applicationsRouter.post('/:id/resolve', requireAuth, async (req, res) => {
   const { data: existing, error: fetchError } = await supabaseAdmin
     .from('applications')

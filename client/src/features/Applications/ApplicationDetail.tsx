@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import type { ApplicationRecord } from './types';
-import { CheckCircle2, Clock, AlertCircle, RefreshCw, Upload, ShieldCheck, ArrowRight, X } from 'lucide-react';
+import { CheckCircle2, Clock, AlertCircle, RefreshCw, Upload, ShieldCheck, ArrowRight, X, Search } from 'lucide-react';
 
 interface ApplicationDetailProps {
   app: ApplicationRecord;
@@ -8,10 +8,22 @@ interface ApplicationDetailProps {
   setShowResolveModal: (show: boolean) => void;
   isResolving: boolean;
   onConfirmResolve: () => void;
+  isCheckingStatus: boolean;
+  onCheckStatus: () => void;
 }
 
-const ApplicationDetail = ({ app, showResolveModal, setShowResolveModal, isResolving, onConfirmResolve }: ApplicationDetailProps) => {
+const ApplicationDetail = ({
+  app,
+  showResolveModal,
+  setShowResolveModal,
+  isResolving,
+  onConfirmResolve,
+  isCheckingStatus,
+  onCheckStatus,
+}: ApplicationDetailProps) => {
   const navigate = useNavigate();
+  const progressPercent = Math.round((app.currentStepIndex / app.totalSteps) * 100);
+  const canCheckStatus = app.currentStatus !== 'Action Required' && app.currentStatus !== 'Disbursed';
 
   return (
     <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-6">
@@ -36,6 +48,24 @@ const ApplicationDetail = ({ app, showResolveModal, setShowResolveModal, isResol
           <span className="text-lg font-semibold font-mono text-slate-900 block">
             {app.benefitAmount}
           </span>
+        </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-[11px] text-slate-500">
+          <span>
+            Step {app.currentStepIndex} of {app.totalSteps} · {app.currentStatus}
+          </span>
+          <span className="font-mono">{progressPercent}%</span>
+        </div>
+        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${
+              app.currentStatus === 'Disbursed' ? 'bg-emerald-600' : 'bg-brand-600'
+            }`}
+            style={{ width: `${progressPercent}%` }}
+          />
         </div>
       </div>
 
@@ -65,11 +95,29 @@ const ApplicationDetail = ({ app, showResolveModal, setShowResolveModal, isResol
       )}
 
       {/* Expected Next Step Box */}
-      <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
-        <span className="font-bold text-slate-900 block">Expected Next Step:</span>
-        <p className="text-slate-600 leading-relaxed">
-          {app.expectedNextStep}
-        </p>
+      <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-2">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <span className="font-bold text-slate-900 block">Expected Next Step:</span>
+            <p className="text-slate-600 leading-relaxed mt-1">
+              {app.expectedNextStep}
+            </p>
+          </div>
+          {canCheckStatus && (
+            <button
+              onClick={onCheckStatus}
+              disabled={isCheckingStatus}
+              className="shrink-0 px-3 py-1.5 bg-white border border-slate-300 hover:border-brand-600 hover:text-brand-700 text-slate-700 font-semibold text-[11px] rounded-md transition-colors flex items-center gap-1.5 disabled:opacity-60"
+            >
+              {isCheckingStatus ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Search className="w-3.5 h-3.5" />
+              )}
+              <span>{isCheckingStatus ? 'Checking...' : 'Check for Updates'}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* STATUS TIMELINE */}

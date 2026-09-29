@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import type { ApplicationRecord } from '../../features/Applications/types';
-import { fetchApplications, resolveApplicationAction } from '../../features/Applications/api';
+import { fetchApplications, resolveApplicationAction, checkApplicationStatus } from '../../features/Applications/api';
 import ApplicationList from '../../features/Applications/ApplicationList';
 import ApplicationDetail from '../../features/Applications/ApplicationDetail';
 
@@ -15,6 +15,7 @@ const ApplicationTracking = () => {
   const [activeAppId, setActiveAppId] = useState<string>('');
   const [showResolveModal, setShowResolveModal] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
+  const [checkingStatusId, setCheckingStatusId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchApplications().then((apps) => {
@@ -26,6 +27,29 @@ const ApplicationTracking = () => {
   }, []);
 
   const activeApp = applications.find((a) => a.id === activeAppId) ?? applications[0];
+
+  const handleCheckStatus = (app: ApplicationRecord) => {
+    setCheckingStatusId(app.id);
+    checkApplicationStatus(app)
+      .then((updated) => {
+        setApplications((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+        if (updated.currentStatus !== app.currentStatus) {
+          addNotification({
+            type: updated.currentStatus === 'Disbursed' ? 'success' : 'info',
+            title: `${updated.schemeName}: ${updated.currentStatus}`,
+            message: updated.expectedNextStep,
+          });
+        }
+      })
+      .catch((err: unknown) => {
+        addNotification({
+          type: 'error',
+          title: 'Could not check for updates',
+          message: err instanceof Error ? err.message : 'Please try again in a moment.',
+        });
+      })
+      .finally(() => setCheckingStatusId(null));
+  };
 
   const handleConfirmResolve = () => {
     if (!activeApp) return;
@@ -88,6 +112,8 @@ const ApplicationTracking = () => {
           setShowResolveModal={setShowResolveModal}
           isResolving={isResolving}
           onConfirmResolve={handleConfirmResolve}
+          isCheckingStatus={checkingStatusId === activeApp.id}
+          onCheckStatus={() => handleCheckStatus(activeApp)}
         />
       </div>
 
