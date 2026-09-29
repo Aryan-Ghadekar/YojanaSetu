@@ -10,6 +10,11 @@ export const env = {
   supabaseUrl: required('SUPABASE_URL'),
   supabaseServiceRoleKey: required('SUPABASE_SERVICE_ROLE_KEY'),
   documentsBucket: process.env.SUPABASE_DOCUMENTS_BUCKET || 'documents',
+  // Optional: base URL of the Python OCR service in ./ocr-service. When unset,
+  // uploads are still stored but skip OCR and are marked "Unable to Verify".
+  ocrServiceUrl: (process.env.OCR_SERVICE_URL || '').replace(/\/+$/, ''),
+  ocrServiceToken: process.env.OCR_SERVICE_TOKEN || '',
+  ocrTimeoutMs: Number(process.env.OCR_TIMEOUT_MS) || 120_000,
   port: Number(process.env.PORT) || 4000,
   clientOrigins: (process.env.CLIENT_ORIGIN || 'http://localhost:3000')
     .split(',')

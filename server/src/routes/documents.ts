@@ -3,18 +3,12 @@ import multer from 'multer';
 import { supabaseAdmin } from '../lib/supabaseAdmin.js';
 import { requireAuth } from '../middleware/auth.js';
 import { env } from '../lib/env.js';
+import { isOcrConfigured, processDocument } from '../lib/ocrClient.js';
+import { analyzeDocument, failedAnalysis, type DocumentAnalysis, type ExtractedField } from '../lib/documentAnalysis.js';
 
 export const documentsRouter = Router();
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
-
-interface ExtractedField {
-  field: string;
-  extractedValue: string;
-  userValue: string;
-  confidence: number;
-  match: boolean;
-}
 
 interface DocumentDbRow {
   id: string;
@@ -73,10 +67,9 @@ documentsRouter.post('/', requireAuth, upload.single('file'), async (req, res) =
 
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('full_name')
+    .select('full_name, date_of_birth, gender, state, district, occupation, annual_income')
     .eq('id', req.user!.id)
     .maybeSingle();
-  const ownerName = profile?.full_name ?? 'Citizen';
 
   const storagePath = `${req.user!.id}/${Date.now()}-${file.originalname}`;
   const { error: uploadError } = await supabaseAdmin.storage
@@ -89,13 +82,25 @@ documentsRouter.post('/', requireAuth, upload.single('file'), async (req, res) =
   }
 
   const displayName = file.originalname.replace(/\.[^/.]+$/, '');
-  const sizeLabel = `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+  const sizeLabel =
+    file.size < 1024 * 1024
+      ? `${Math.max(1, Math.round(file.size / 1024))} KB`
+      : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
 
-  const extractedFields: ExtractedField[] = [
-    { field: 'Beneficiary Name', extractedValue: ownerName, userValue: ownerName, confidence: 0.98, match: true },
-    { field: 'Document Category', extractedValue: category, userValue: category, confidence: 0.95, match: true },
-    { field: 'Verification Date', extractedValue: new Date().toLocaleDateString('en-IN'), userValue: new Date().toISOString().slice(0, 10), confidence: 0.99, match: true },
-  ];
+  // Quality check -> OCR -> LLM field extraction (Python service). A failure here must
+  // not lose the upload: the file is stored and flagged so the user can retry/review.
+  let analysis: DocumentAnalysis;
+  if (!isOcrConfigured()) {
+    analysis = failedAnalysis('OCR service is not configured on the server; document was stored without analysis');
+  } else {
+    try {
+      const ocr = await processDocument(file, category);
+      analysis = analyzeDocument(ocr, profile);
+    } catch (e) {
+      console.error('Document OCR failed:', e);
+      analysis = failedAnalysis(e instanceof Error ? e.message : 'Document analysis failed');
+    }
+  }
 
   const { data, error } = await supabaseAdmin
     .from('documents')
@@ -108,22 +113,11 @@ documentsRouter.post('/', requireAuth, upload.single('file'), async (req, res) =
       storage_path: storagePath,
       uploaded_at: 'Just now',
       source: 'Upload',
-      ocr_status: 'complete',
-      quality_status: 'readable',
-      verification_status: 'Verified',
-      authenticity_signals: {
-        structureRecognized: true,
-        ocrConsistencyPassed: true,
-        imageManipulationDetected: false,
-        issuingAuthorityVerified: true,
-        digitalSignatureValid: true,
-        details: [
-          'Document OCR completed successfully',
-          'Government header and layout recognized',
-          'Cross-referenced with citizen profile identity record',
-        ],
-      },
-      extracted_fields: extractedFields,
+      ocr_status: analysis.ocrStatus,
+      quality_status: analysis.qualityStatus,
+      verification_status: analysis.verificationStatus,
+      authenticity_signals: analysis.authenticitySignals,
+      extracted_fields: analysis.extractedFields satisfies ExtractedField[],
     })
     .select('*')
     .single();
