@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { supabaseAdmin } from '../lib/supabaseAdmin.js';
 import { optionalAuth, requireAuth } from '../middleware/auth.js';
 import { computeEligibility, type ProfileRow, type SchemeRow } from '../lib/eligibility.js';
+import { matchDocumentCategory } from '../lib/documentMatching.js';
 
 export const schemesRouter = Router();
 
@@ -36,21 +37,8 @@ interface SchemeDbRow {
 function toCamelScheme(row: SchemeDbRow, profile: ProfileRow | null, documentCategories: Set<string>) {
   const eligibility = computeEligibility(row, profile);
 
-  const categoryHints: Record<string, string[]> = {
-    Identity: ['aadhaar', 'pan'],
-    Income: ['income'],
-    Education: ['marksheet', 'admission', 'bona fide', 'fee receipt', 'academic'],
-    'Caste / Category': ['caste'],
-    Residence: ['domicile', 'residence', 'ration'],
-    Banking: ['bank'],
-    'Land / Property': ['land', '7/12', 'property'],
-  };
-
   const documents = row.documents.map((doc) => {
-    const nameLower = doc.name.toLowerCase();
-    const matchedCategory = Object.entries(categoryHints).find(([, hints]) =>
-      hints.some((hint) => nameLower.includes(hint)),
-    )?.[0];
+    const matchedCategory = matchDocumentCategory(doc.name);
     const isAvailable = matchedCategory ? documentCategories.has(matchedCategory) : false;
     return {
       ...doc,

@@ -1,7 +1,11 @@
-import type { DocumentCategory, UserDocument } from './types';
+import type { DocumentCategory, MissingDocument, UserDocument } from './types';
 import { apiGet, apiPatch, apiPost, apiUpload } from '../../lib/apiClient';
 
 export const fetchDocuments = (): Promise<UserDocument[]> => apiGet<UserDocument[]>('/api/documents');
+
+/** Documents required by any scheme the user is at least borderline-eligible for, that they haven't uploaded yet. */
+export const fetchMissingDocuments = (): Promise<{ missingDocuments: MissingDocument[] }> =>
+  apiGet('/api/documents/missing');
 
 interface UploadDocumentInput {
   file: File;

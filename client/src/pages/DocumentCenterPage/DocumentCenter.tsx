@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { DocumentCategory, UserDocument } from '../../features/Documents/types';
 import { fetchDocuments, uploadDocument, updateDocumentField } from '../../features/Documents/api';
 import DocumentUploadPanel from '../../features/Documents/DocumentUploadPanel';
+import MissingDocumentDetector from '../../features/Documents/MissingDocumentDetector';
 import DocumentList from '../../features/Documents/DocumentList';
 import DocumentFieldInspector from '../../features/Documents/DocumentFieldInspector';
 import { CheckCircle2, AlertTriangle } from 'lucide-react';
@@ -14,6 +15,7 @@ const DocumentCenter = () => {
   const [selectedDocId, setSelectedDocId] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadCategory, setUploadCategory] = useState<DocumentCategory>('Income');
+  const uploadPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchDocuments().then((docs) => {
@@ -83,12 +85,21 @@ const DocumentCenter = () => {
         </div>
       </div>
 
-      <DocumentUploadPanel
-        uploadCategory={uploadCategory}
-        onCategoryChange={setUploadCategory}
-        isUploading={isUploading}
-        onFileSelected={handleFileSelected}
+      <MissingDocumentDetector
+        onUploadCategory={(category) => {
+          setUploadCategory(category);
+          uploadPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }}
       />
+
+      <div ref={uploadPanelRef}>
+        <DocumentUploadPanel
+          uploadCategory={uploadCategory}
+          onCategoryChange={setUploadCategory}
+          isUploading={isUploading}
+          onFileSelected={handleFileSelected}
+        />
+      </div>
 
       {/* TWO-COLUMN WORKBENCH: DOCUMENT LIST + EXTRACTED FIELD INSPECTOR */}
       {selectedDoc ? (

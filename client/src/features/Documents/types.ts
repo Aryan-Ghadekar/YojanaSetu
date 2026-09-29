@@ -15,6 +15,21 @@ export interface ExtractedField {
   match: boolean;
 }
 
+export interface MissingDocumentSchemeRef {
+  id: string;
+  name: string;
+  shortName: string;
+  benefitAmount: string;
+  matchStatus: 'Strong match' | 'Potential match' | 'Borderline';
+}
+
+export interface MissingDocument {
+  name: string;
+  category: DocumentCategory | null;
+  schemeCount: number;
+  schemes: MissingDocumentSchemeRef[];
+}
+
 export interface UserDocument {
   id: string;
   name: string;

@@ -5,6 +5,8 @@ import { requireAuth } from '../middleware/auth.js';
 import { env } from '../lib/env.js';
 import { isOcrConfigured, processDocument } from '../lib/ocrClient.js';
 import { analyzeDocument, failedAnalysis, type DocumentAnalysis, type ExtractedField } from '../lib/documentAnalysis.js';
+import { computeEligibility, type ProfileRow, type SchemeRow } from '../lib/eligibility.js';
+import { matchDocumentCategory } from '../lib/documentMatching.js';
 
 export const documentsRouter = Router();
 
@@ -55,6 +57,91 @@ documentsRouter.get('/', requireAuth, async (req, res) => {
     return;
   }
   res.json((data as DocumentDbRow[]).map(toCamelDocument));
+});
+
+interface SchemeDbRowForMissingDocs extends SchemeRow {
+  name: string;
+  short_name: string;
+  benefit_amount: string;
+  documents: Array<{ id: string; name: string }>;
+}
+
+interface MissingDocumentSchemeRef {
+  id: string;
+  name: string;
+  shortName: string;
+  benefitAmount: string;
+  matchStatus: string;
+}
+
+documentsRouter.get('/missing', requireAuth, async (req, res) => {
+  const [{ data: profileData }, { data: userDocs, error: docsError }, { data: schemeRows, error: schemesError }] =
+    await Promise.all([
+      supabaseAdmin
+        .from('profiles')
+        .select('full_name, age, gender, state, annual_income, caste_category, occupation, is_student, land_holding_acres')
+        .eq('id', req.user!.id)
+        .maybeSingle(),
+      supabaseAdmin.from('documents').select('category').eq('user_id', req.user!.id),
+      supabaseAdmin
+        .from('schemes')
+        .select(
+          'id, name, short_name, benefit_amount, max_income_limit, min_age, max_age, eligible_genders, eligible_states, eligibility_criteria, documents',
+        ),
+    ]);
+
+  if (docsError) {
+    res.status(500).json({ error: docsError.message });
+    return;
+  }
+  if (schemesError) {
+    res.status(500).json({ error: schemesError.message });
+    return;
+  }
+
+  const profile = (profileData as ProfileRow | null) ?? null;
+  if (!profile) {
+    res.status(400).json({ error: 'Complete your citizen profile to run the missing document detector.' });
+    return;
+  }
+
+  const documentCategories = new Set((userDocs ?? []).map((d: { category: string }) => d.category));
+
+  // Aggregate, across every scheme the user is at least borderline-eligible for, the
+  // required documents they haven't uploaded yet -- ranked by how many schemes each unlocks.
+  const missingByName = new Map<string, { category: string | undefined; schemes: MissingDocumentSchemeRef[] }>();
+
+  for (const row of schemeRows as SchemeDbRowForMissingDocs[]) {
+    const eligibility = computeEligibility(row, profile);
+    if (eligibility.matchStatus === 'Not currently eligible') continue;
+
+    for (const doc of row.documents) {
+      const category = matchDocumentCategory(doc.name);
+      const isAvailable = category ? documentCategories.has(category) : false;
+      if (isAvailable) continue;
+
+      const entry = missingByName.get(doc.name) ?? { category, schemes: [] };
+      entry.schemes.push({
+        id: row.id,
+        name: row.name,
+        shortName: row.short_name,
+        benefitAmount: row.benefit_amount,
+        matchStatus: eligibility.matchStatus,
+      });
+      missingByName.set(doc.name, entry);
+    }
+  }
+
+  const missingDocuments = [...missingByName.entries()]
+    .map(([name, { category, schemes }]) => ({
+      name,
+      category: category ?? null,
+      schemeCount: schemes.length,
+      schemes,
+    }))
+    .sort((a, b) => b.schemeCount - a.schemeCount || a.name.localeCompare(b.name));
+
+  res.json({ missingDocuments });
 });
 
 documentsRouter.post('/', requireAuth, upload.single('file'), async (req, res) => {
