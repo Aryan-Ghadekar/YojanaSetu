@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useState } from 'react';
-import type { Dispatch, ReactNode, SetStateAction } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
+import type { Session } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabaseClient';
 import type { UserProfile } from '../features/Profile/types';
-import { initialUserProfile } from '../features/Profile/mockData';
+import { fetchProfile, updateProfile as updateProfileApi } from '../features/Profile/api';
 import type { SupportedLanguage } from './translations';
 import { translations } from './translations';
 
@@ -20,9 +22,9 @@ type UserRole = 'citizen' | 'admin';
 interface AppContextType {
   // Auth
   isAuthenticated: boolean;
-  setIsAuthenticated: (value: boolean) => void;
+  authLoading: boolean;
   userRole: UserRole;
-  setUserRole: (role: UserRole) => void;
+  signOut: () => Promise<void>;
 
   // Localization
   language: SupportedLanguage;
@@ -30,8 +32,10 @@ interface AppContextType {
   t: (typeof translations)['en'];
 
   // Citizen profile (used across most citizen-facing features)
-  userProfile: UserProfile;
-  setUserProfile: Dispatch<SetStateAction<UserProfile>>;
+  userProfile: UserProfile | null;
+  profileLoading: boolean;
+  updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
+  refreshProfile: () => Promise<void>;
 
   // Notifications
   notifications: ToastNotification[];
@@ -50,36 +54,44 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 const MAX_COMPARISON_SCHEMES = 4;
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole>('citizen');
   const [language, setLanguage] = useState<SupportedLanguage>('en');
-  const [userProfile, setUserProfile] = useState<UserProfile>(initialUserProfile);
 
-  const [comparisonSchemeIds, setComparisonSchemeIds] = useState<string[]>([
-    'maha-swadhar-2026',
-    'post-matric-scholarship-2026',
-  ]);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
 
-  const [notifications, setNotifications] = useState<ToastNotification[]>([
-    {
-      id: 'notif-1',
-      type: 'warning',
-      title: 'Action Required on Application',
-      message: 'Post-Matric Scholarship flagged: Income certificate blur. Upload a clear copy by Oct 5.',
-      actionText: 'Resolve Issue',
-      actionTarget: '/applications',
-      timestamp: '10 min ago',
-    },
-    {
-      id: 'notif-2',
-      type: 'success',
-      title: 'DigiLocker Synced',
-      message: '4 documents verified from National DigiLocker Repository with digital signatures.',
-      actionText: 'View Documents',
-      actionTarget: '/documents',
-      timestamp: '2 hours ago',
-    },
-  ]);
+  const [comparisonSchemeIds, setComparisonSchemeIds] = useState<string[]>([]);
+  const [notifications, setNotifications] = useState<ToastNotification[]>([]);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setAuthLoading(false);
+    });
+
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+    });
+
+    return () => subscription.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!session) {
+      setUserProfile(null);
+      setUserRole('citizen');
+      return;
+    }
+
+    setUserRole((session.user.user_metadata?.role as UserRole) ?? 'citizen');
+    setProfileLoading(true);
+    fetchProfile()
+      .then(setUserProfile)
+      .catch(() => setUserProfile(null))
+      .finally(() => setProfileLoading(false));
+  }, [session]);
 
   const t = translations[language] || translations.en;
 
@@ -123,18 +135,36 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const isInComparison = (schemeId: string) => comparisonSchemeIds.includes(schemeId);
 
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setComparisonSchemeIds([]);
+    setNotifications([]);
+  };
+
+  const updateProfile = async (updates: Partial<UserProfile>) => {
+    const updated = await updateProfileApi(updates);
+    setUserProfile(updated);
+  };
+
+  const refreshProfile = async () => {
+    const latest = await fetchProfile();
+    setUserProfile(latest);
+  };
+
   return (
     <AppContext.Provider
       value={{
-        isAuthenticated,
-        setIsAuthenticated,
+        isAuthenticated: !!session,
+        authLoading,
         userRole,
-        setUserRole,
+        signOut,
         language,
         setLanguage,
         t,
         userProfile,
-        setUserProfile,
+        profileLoading,
+        updateProfile,
+        refreshProfile,
         notifications,
         addNotification,
         dismissNotification,

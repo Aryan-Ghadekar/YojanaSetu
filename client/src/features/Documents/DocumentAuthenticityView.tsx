@@ -11,9 +11,7 @@ interface DocumentAuthenticityViewProps {
 const DocumentAuthenticityView = ({ doc, onSubmitReview }: DocumentAuthenticityViewProps) => {
   const navigate = useNavigate();
   const [manualSubmitted, setManualSubmitted] = useState(false);
-  const [reviewNote, setReviewNote] = useState(
-    'The Tehsildar rubber seal has mild camera flash glare on the lower left quadrant. The income figure of ₹2,10,000 matches the Marathi text and the registration barcode.'
-  );
+  const [reviewNote, setReviewNote] = useState('');
 
   const handleSubmitManualReview = (e: React.FormEvent) => {
     e.preventDefault();
@@ -226,6 +224,7 @@ const DocumentAuthenticityView = ({ doc, onSubmitReview }: DocumentAuthenticityV
                 value={reviewNote}
                 onChange={(e) => setReviewNote(e.target.value)}
                 rows={3}
+                placeholder="Explain any discrepancy or provide context for the reviewing officer..."
                 className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-brand-600 focus:outline-none"
               />
             </div>

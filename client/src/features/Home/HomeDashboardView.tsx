@@ -26,6 +26,8 @@ const HomeDashboardView = ({ schemes, applications }: HomeDashboardViewProps) =>
 
   const recommended = schemes.slice(0, 4);
 
+  if (!userProfile) return null;
+
   return (
     <div className="space-y-8 pb-12">
 
@@ -176,13 +178,13 @@ const HomeDashboardView = ({ schemes, applications }: HomeDashboardViewProps) =>
           <div>
             <span className="text-slate-600 block text-[11px]">Occupation</span>
             <span className="font-semibold text-slate-900 mt-0.5 block truncate" title={userProfile.occupation}>
-              Student / Farmer
+              {userProfile.occupation}
             </span>
           </div>
 
           <div>
             <span className="text-slate-600 block text-[11px]">Declared Family Income</span>
-            <span className="font-semibold text-slate-900 mt-0.5 block font-mono">₹2,10,000 / yr</span>
+            <span className="font-semibold text-slate-900 mt-0.5 block font-mono">₹{userProfile.annualIncome.toLocaleString('en-IN')} / yr</span>
           </div>
 
           <div>
@@ -192,7 +194,7 @@ const HomeDashboardView = ({ schemes, applications }: HomeDashboardViewProps) =>
 
           <div>
             <span className="text-slate-600 block text-[11px]">Family & Land</span>
-            <span className="font-semibold text-slate-900 mt-0.5 block font-mono">{userProfile.familyMembers} members · 1.8 ac</span>
+            <span className="font-semibold text-slate-900 mt-0.5 block font-mono">{userProfile.familyMembers} members · {userProfile.landHoldingAcres} ac</span>
           </div>
         </div>
       </section>

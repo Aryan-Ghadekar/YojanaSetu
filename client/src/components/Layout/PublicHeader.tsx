@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { useApp } from '../../context/AppContext';
 import Logo from '../ui/Logo';
 import govOfIndiaLogo from '../../assets/Government_of_India_logo.svg';
 
@@ -7,7 +6,6 @@ const navLinkClass =
   'relative py-1 text-base font-medium text-slate-600 transition-colors hover:text-slate-900 after:absolute after:bottom-0 after:left-1/2 after:h-0.5 after:w-0 after:-translate-x-1/2 after:rounded-full after:bg-brand-600 after:transition-all after:duration-300 after:ease-out hover:after:w-full';
 
 const PublicHeader = () => {
-  const { setUserRole } = useApp();
   const navigate = useNavigate();
 
   const scrollToHowItWorks = (e: React.MouseEvent) => {
@@ -35,13 +33,7 @@ const PublicHeader = () => {
           <button onClick={() => navigate('/applications')} className={navLinkClass}>
             Track Application
           </button>
-          <button
-            onClick={() => {
-              setUserRole('admin');
-              navigate('/admin');
-            }}
-            className={navLinkClass}
-          >
+          <button onClick={() => navigate('/login')} className={navLinkClass}>
             Officer Portal
           </button>
         </nav>

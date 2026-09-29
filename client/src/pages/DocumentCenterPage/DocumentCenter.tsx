@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useApp } from '../../context/AppContext';
 import type { DocumentCategory, UserDocument } from '../../features/Documents/types';
 import { fetchDocuments, uploadDocument, updateDocumentField } from '../../features/Documents/api';
 import DocumentUploadPanel from '../../features/Documents/DocumentUploadPanel';
@@ -9,7 +8,6 @@ import DocumentFieldInspector from '../../features/Documents/DocumentFieldInspec
 import { CheckCircle2, AlertTriangle } from 'lucide-react';
 
 const DocumentCenter = () => {
-  const { userProfile } = useApp();
   const navigate = useNavigate();
 
   const [documents, setDocuments] = useState<UserDocument[]>([]);
@@ -28,16 +26,10 @@ const DocumentCenter = () => {
 
   const verifiedCount = documents.filter((d) => d.verificationStatus === 'Verified').length;
   const reviewCount = documents.filter((d) => d.verificationStatus === 'Needs Review' || d.verificationStatus === 'Suspicious Signals').length;
-  const missingCount = 1; // Hostel Undertaking missing
 
   const handleFileSelected = (file: File) => {
     setIsUploading(true);
-    uploadDocument({
-      name: file.name,
-      size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-      category: uploadCategory,
-      ownerName: userProfile.fullName,
-    }).then((newDoc) => {
+    uploadDocument({ file, category: uploadCategory }).then((newDoc) => {
       setDocuments((prev) => [newDoc, ...prev]);
       setSelectedDocId(newDoc.id);
       setIsUploading(false);
@@ -50,8 +42,6 @@ const DocumentCenter = () => {
       setDocuments((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
     });
   };
-
-  if (!selectedDoc) return null;
 
   return (
     <div className="space-y-8 pb-12 max-w-6xl mx-auto">
@@ -67,7 +57,7 @@ const DocumentCenter = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="p-4 bg-white border border-slate-200 rounded-xl">
             <span className="text-xs text-slate-600 block">Total Uploaded</span>
             <span className="text-xl sm:text-2xl font-semibold font-mono text-slate-900 mt-1 block">
@@ -90,13 +80,6 @@ const DocumentCenter = () => {
               <span>{reviewCount} need review</span>
             </span>
           </div>
-
-          <div className="p-4 bg-rose-50/60 border border-rose-200 rounded-xl">
-            <span className="text-xs text-rose-800 font-medium block">Missing Documents</span>
-            <span className="text-xl sm:text-2xl font-semibold font-mono text-rose-900 mt-1 block">
-              {missingCount} missing
-            </span>
-          </div>
         </div>
       </div>
 
@@ -108,20 +91,26 @@ const DocumentCenter = () => {
       />
 
       {/* TWO-COLUMN WORKBENCH: DOCUMENT LIST + EXTRACTED FIELD INSPECTOR */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <DocumentList
-          documents={documents}
-          selectedDocId={selectedDoc.id}
-          onSelect={(doc) => setSelectedDocId(doc.id)}
-          onAuditSignals={(doc) => navigate(`/documents/authenticity/${doc.id}`)}
-        />
-        <DocumentFieldInspector
-          doc={selectedDoc}
-          onSaveField={handleSaveField}
-          onAuditSignals={() => navigate(`/documents/authenticity/${selectedDoc.id}`)}
-          onUseInApplication={() => navigate('/applications')}
-        />
-      </div>
+      {selectedDoc ? (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <DocumentList
+            documents={documents}
+            selectedDocId={selectedDoc.id}
+            onSelect={(doc) => setSelectedDocId(doc.id)}
+            onAuditSignals={(doc) => navigate(`/documents/authenticity/${doc.id}`)}
+          />
+          <DocumentFieldInspector
+            doc={selectedDoc}
+            onSaveField={handleSaveField}
+            onAuditSignals={() => navigate(`/documents/authenticity/${selectedDoc.id}`)}
+            onUseInApplication={() => navigate('/applications')}
+          />
+        </div>
+      ) : (
+        <div className="p-8 text-center text-sm text-slate-500 bg-white border border-dashed border-slate-200 rounded-2xl">
+          No documents uploaded yet. Upload your first certificate above to get started.
+        </div>
+      )}
 
     </div>
   );

@@ -1,8 +1,7 @@
-import type { AdminDistrictMetric } from './types';
-import { mockAdminDistricts } from './mockData';
+import type { AdminDistrictMetric, UtilizationAnalytics } from './types';
+import { apiGet } from '../../lib/apiClient';
 
-const MOCK_LATENCY_MS = 300;
-const delay = <T,>(value: T, ms = MOCK_LATENCY_MS): Promise<T> =>
-  new Promise((resolve) => setTimeout(() => resolve(value), ms));
+export const fetchAdminDistricts = (): Promise<AdminDistrictMetric[]> => apiGet<AdminDistrictMetric[]>('/api/admin/districts');
 
-export const fetchAdminDistricts = (): Promise<AdminDistrictMetric[]> => delay(mockAdminDistricts);
+export const fetchUtilizationAnalytics = (): Promise<UtilizationAnalytics> =>
+  apiGet<UtilizationAnalytics>('/api/admin/utilization');

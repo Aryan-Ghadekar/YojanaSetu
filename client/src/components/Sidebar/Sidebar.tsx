@@ -31,16 +31,16 @@ interface NavItem {
 }
 
 const Sidebar = () => {
-  const { t, userRole, setUserRole, language, setLanguage } = useApp();
+  const { t, userRole, language, setLanguage } = useApp();
   const location = useLocation();
   const navigate = useNavigate();
 
   const citizenNavItems: NavItem[] = [
     { path: '/home', label: t.home, icon: Home },
     { path: '/schemes', label: t.findSchemes, icon: Search, matchPrefixes: ['/schemes/results', '/schemes'] },
-    { path: '/eligibility/borderline', label: t.myEligibility, icon: CheckCircle, badge: 'Review' },
+    { path: '/eligibility/borderline', label: t.myEligibility, icon: CheckCircle },
     { path: '/documents', label: t.myDocuments, icon: FolderLock, matchPrefixes: ['/documents'] },
-    { path: '/applications', label: t.applications, icon: FileText, badge: '1 Action', matchPrefixes: ['/applications'] },
+    { path: '/applications', label: t.applications, icon: FileText, matchPrefixes: ['/applications'] },
     { path: '/copilot', label: t.copilot, icon: Bot },
     { path: '/schemes/compare', label: t.compareSchemes, icon: Scale },
     { path: '/benefits', label: t.benefitsUtilization, icon: TrendingUp },
@@ -64,24 +64,10 @@ const Sidebar = () => {
 
       {/* Role Banner / Context */}
       <div className="p-3 border-b border-slate-100">
-        <div className="flex items-center justify-between bg-slate-50 rounded-lg p-2 text-xs border border-slate-200">
+        <div className="flex items-center bg-slate-50 rounded-lg p-2 text-xs border border-slate-200">
           <span className="font-medium text-slate-700">
             {userRole === 'citizen' ? 'Citizen Interface' : 'Government Officer Portal'}
           </span>
-          <button
-            onClick={() => {
-              if (userRole === 'citizen') {
-                setUserRole('admin');
-                navigate('/admin');
-              } else {
-                setUserRole('citizen');
-                navigate('/home');
-              }
-            }}
-            className="text-[11px] text-brand-600 hover:text-brand-800 font-semibold"
-          >
-            {userRole === 'citizen' ? 'Officer Mode →' : 'Citizen View →'}
-          </button>
         </div>
       </div>
 

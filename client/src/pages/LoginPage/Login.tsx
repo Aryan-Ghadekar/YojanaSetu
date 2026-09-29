@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
+import { supabase } from '../../lib/supabaseClient';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -12,7 +13,7 @@ type Audience = 'citizen' | 'officer';
 type Mode = 'signin' | 'signup';
 
 const Login = () => {
-  const { setUserRole, setIsAuthenticated, userRole } = useApp();
+  const { userRole } = useApp();
   const navigate = useNavigate();
 
   const [audience, setAudience] = useState<Audience>(userRole === 'admin' ? 'officer' : 'citizen');
@@ -24,13 +25,14 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const audienceOptions = [
     { value: 'citizen', label: 'Citizens' },
     { value: 'officer', label: 'Officials' },
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -42,10 +44,40 @@ const Login = () => {
       setError('Please fill in all required fields.');
       return;
     }
+    if (mode === 'signup' && !name.trim()) {
+      setError('Please enter your full name.');
+      return;
+    }
 
-    setUserRole(audience === 'officer' ? 'admin' : 'citizen');
-    setIsAuthenticated(true);
-    navigate(audience === 'officer' ? '/admin' : '/home');
+    setIsSubmitting(true);
+    try {
+      if (mode === 'signup') {
+        const { error: signUpError } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            data: {
+              full_name: name.trim(),
+              role: audience === 'officer' ? 'admin' : 'citizen',
+              phone: phone.trim() || undefined,
+            },
+          },
+        });
+        if (signUpError) throw signUpError;
+      } else {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+        if (signInError) throw signInError;
+      }
+
+      navigate(audience === 'officer' ? '/admin' : '/home');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -150,8 +182,8 @@ const Login = () => {
 
             {error && <p className="text-sm text-rose-600">{error}</p>}
 
-            <Button type="submit" className="w-full">
-              {mode === 'signup' ? 'Create Account' : 'Sign In'}
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? 'Please wait...' : mode === 'signup' ? 'Create Account' : 'Sign In'}
             </Button>
           </form>
 

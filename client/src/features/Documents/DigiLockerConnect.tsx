@@ -7,9 +7,10 @@ interface DigiLockerConnectProps {
   isConnecting: boolean;
   onConnect: () => void;
   onConsentMissing: () => void;
+  fullName: string;
 }
 
-const DigiLockerConnect = ({ digiLockerConnected, isConnecting, onConnect, onConsentMissing }: DigiLockerConnectProps) => {
+const DigiLockerConnect = ({ digiLockerConnected, isConnecting, onConnect, onConsentMissing, fullName }: DigiLockerConnectProps) => {
   const navigate = useNavigate();
 
   const [consentChecked, setConsentChecked] = useState(true);
@@ -165,7 +166,7 @@ const DigiLockerConnect = ({ digiLockerConnected, isConnecting, onConnect, onCon
                 <div className="space-y-1">
                   <span className="text-[10px] uppercase font-semibold text-brand-700 block">Identity Document</span>
                   <div className="font-bold text-slate-900">Aadhaar Card (UIDAI)</div>
-                  <div className="text-[11px] text-slate-500 font-mono">Issued to: Rahul Sambhaji Patil</div>
+                  <div className="text-[11px] text-slate-500 font-mono">Issued to: {fullName}</div>
                   <div className="text-[10px] text-emerald-700 font-medium flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" />
                     <span>Cryptographically Signed QR Verified</span>

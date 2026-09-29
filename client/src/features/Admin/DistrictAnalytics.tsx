@@ -22,7 +22,9 @@ const DistrictAnalytics = ({ districts }: DistrictAnalyticsProps) => {
   const { addNotification } = useApp();
   const navigate = useNavigate();
 
-  const [selectedDistrict, setSelectedDistrict] = useState<AdminDistrictMetric>(districts[1]); // Gadchiroli (Severe Gap)
+  const [selectedDistrict, setSelectedDistrict] = useState<AdminDistrictMetric>(
+    districts.find((d) => d.awarenessGapScore === 'Severe') ?? districts[0],
+  );
   const [showCampaignModal, setShowCampaignModal] = useState(false);
   const [campaignData, setCampaignData] = useState({
     region: 'Gadchiroli',

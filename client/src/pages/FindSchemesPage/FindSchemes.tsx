@@ -3,6 +3,7 @@ import FindSchemesSearch from '../../features/Schemes/FindSchemesSearch';
 
 const FindSchemes = () => {
   const { userProfile } = useApp();
+  if (!userProfile) return null;
   return <FindSchemesSearch userProfile={userProfile} />;
 };
 

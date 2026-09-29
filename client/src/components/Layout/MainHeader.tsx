@@ -33,13 +33,22 @@ const MainHeader = () => {
     notifications,
     dismissNotification,
     userProfile,
-    setIsAuthenticated,
+    signOut,
   } = useApp();
   const navigate = useNavigate();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showLangMenu, setShowLangMenu] = useState(false);
   const [showNotifMenu, setShowNotifMenu] = useState(false);
+
+  const initials = userProfile?.fullName
+    ? userProfile.fullName
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]!.toUpperCase())
+        .join('')
+    : '..';
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,13 +111,13 @@ const MainHeader = () => {
           <button
             onClick={() => navigate('/documents/digilocker')}
             className={`hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors whitespace-nowrap ${
-              userProfile.digiLockerConnected
+              userProfile?.digiLockerConnected
                 ? 'bg-accent-50 text-accent-700 border-accent-200 hover:bg-accent-100'
                 : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5 text-accent-600" />
-            <span>{userProfile.digiLockerConnected ? 'DigiLocker Linked' : 'Connect DigiLocker'}</span>
+            <span>{userProfile?.digiLockerConnected ? 'DigiLocker Linked' : 'Connect DigiLocker'}</span>
           </button>
 
           {/* Multilingual Selector */}
@@ -217,14 +226,14 @@ const MainHeader = () => {
             title="View Citizen Profile"
           >
             <div className="w-7 h-7 rounded-full bg-brand-700 text-white flex items-center justify-center text-xs font-semibold">
-              RP
+              {initials}
             </div>
             <div className="hidden xl:flex flex-col text-left">
               <span className="text-sm font-semibold text-slate-800 leading-none truncate max-w-[110px]">
-                {userProfile.fullName}
+                {userProfile?.fullName ?? 'Loading...'}
               </span>
               <span className="text-[10px] text-slate-600 leading-none mt-1">
-                {userProfile.district}, {userProfile.state}
+                {userProfile ? `${userProfile.district}, ${userProfile.state}` : ''}
               </span>
             </div>
           </button>
@@ -232,7 +241,7 @@ const MainHeader = () => {
           {/* Sign Out */}
           <button
             onClick={() => {
-              setIsAuthenticated(false);
+              signOut();
               navigate('/');
             }}
             className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"

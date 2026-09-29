@@ -1,29 +1,51 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import type { CasteCategory } from './types';
+import type { CasteCategory, UserProfile } from './types';
 import { ShieldCheck, Edit3, Save, ArrowRight } from 'lucide-react';
 
 const ProfileForm = () => {
-  const { userProfile, setUserProfile, addNotification } = useApp();
+  const { userProfile, profileLoading, updateProfile, addNotification } = useApp();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({ ...userProfile });
+  const [formData, setFormData] = useState<UserProfile | null>(userProfile);
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (userProfile && !isEditing) {
+      setFormData(userProfile);
+    }
+  }, [userProfile, isEditing]);
+
+  if (profileLoading || !formData || !userProfile) {
+    return <div className="text-sm text-slate-500 py-12 text-center">Loading your profile...</div>;
+  }
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setUserProfile({
-      ...formData,
-      annualIncome: Number(formData.annualIncome),
-      age: Number(formData.age),
-      completenessPercentage: formData.digiLockerConnected ? 92 : 82,
-    });
-    setIsEditing(false);
-    addNotification({
-      type: 'success',
-      title: 'Profile Updated',
-      message: 'Updated attributes recalculated across all 120 government welfare rules.',
-    });
+    setIsSaving(true);
+    try {
+      await updateProfile({
+        ...formData,
+        annualIncome: Number(formData.annualIncome),
+        age: Number(formData.age),
+        completenessPercentage: formData.digiLockerConnected ? 92 : 82,
+      });
+      setIsEditing(false);
+      addNotification({
+        type: 'success',
+        title: 'Profile Updated',
+        message: 'Updated attributes recalculated across all government welfare rules.',
+      });
+    } catch (err) {
+      addNotification({
+        type: 'error',
+        title: 'Update Failed',
+        message: err instanceof Error ? err.message : 'Could not save your profile changes.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -62,18 +84,25 @@ const ProfileForm = () => {
       <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-2xl bg-brand-700 text-white flex items-center justify-center font-bold text-xl shadow-xs">
-            RP
+            {userProfile.fullName
+              .split(/\s+/)
+              .filter(Boolean)
+              .slice(0, 2)
+              .map((part) => part[0]!.toUpperCase())
+              .join('') || '?'}
           </div>
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-semibold text-slate-900">{userProfile.fullName}</h2>
-              <span className="text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold px-2 py-0.5 rounded flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                <span>eKYC Verified</span>
-              </span>
+              <h2 className="text-base font-semibold text-slate-900">{userProfile.fullName || 'Unnamed Citizen'}</h2>
+              {userProfile.aadhaarLinked && (
+                <span className="text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold px-2 py-0.5 rounded flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                  <span>eKYC Verified</span>
+                </span>
+              )}
             </div>
             <p className="text-xs text-slate-500 font-mono">
-              Aadhaar: XXXX-XXXX-4921 · Domicile: Maharashtra
+              Aadhaar: {userProfile.aadhaarLinked ? 'Linked' : 'Not Linked'} · Domicile: {userProfile.state || 'Not set'}
             </p>
           </div>
         </div>
@@ -84,7 +113,7 @@ const ProfileForm = () => {
             {userProfile.completenessPercentage}%
           </div>
           <span className="text-[11px] text-slate-500 block">
-            DigiLocker Linked & Certified
+            {userProfile.digiLockerConnected ? 'DigiLocker Linked & Certified' : 'DigiLocker Not Connected'}
           </span>
         </div>
       </div>
@@ -213,10 +242,11 @@ const ProfileForm = () => {
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-md text-xs transition-colors flex items-center gap-1.5"
+              disabled={isSaving}
+              className="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-md text-xs transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save className="w-3.5 h-3.5" />
-              <span>Save & Recalculate Schemes</span>
+              <span>{isSaving ? 'Saving...' : 'Save & Recalculate Schemes'}</span>
             </button>
           </div>
         )}

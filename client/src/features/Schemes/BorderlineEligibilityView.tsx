@@ -4,10 +4,13 @@ import { AlertTriangle, Bot, ExternalLink, ArrowRight } from 'lucide-react';
 
 interface BorderlineEligibilityViewProps {
   scheme: Scheme;
+  annualIncome: number;
 }
 
-const BorderlineEligibilityView = ({ scheme }: BorderlineEligibilityViewProps) => {
+const BorderlineEligibilityView = ({ scheme, annualIncome }: BorderlineEligibilityViewProps) => {
   const navigate = useNavigate();
+  const overBy = annualIncome - scheme.maxIncomeLimit;
+  const formatInr = (value: number) => `₹${Math.abs(value).toLocaleString('en-IN')}`;
 
   return (
     <div className="space-y-6 pb-12 max-w-4xl mx-auto">
@@ -50,30 +53,30 @@ const BorderlineEligibilityView = ({ scheme }: BorderlineEligibilityViewProps) =
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
             <span className="text-slate-500 block text-[11px]">Your Declared Family Income</span>
             <span className="text-xl font-semibold font-mono text-slate-900 mt-1 block">
-              ₹2,10,000 / year
+              {formatInr(annualIncome)} / year
             </span>
             <span className="text-[10px] text-slate-500 mt-1 block">
-              Source: Uploaded Tehsildar Certificate (June 2025)
+              Source: Your citizen profile
             </span>
           </div>
 
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-            <span className="text-slate-500 block text-[11px]">100% Full Waiver Threshold</span>
+            <span className="text-slate-500 block text-[11px]">Scheme Income Threshold</span>
             <span className="text-xl font-semibold font-mono text-slate-900 mt-1 block">
-              ₹2,00,000 / year
+              {formatInr(scheme.maxIncomeLimit)} / year
             </span>
             <span className="text-[10px] text-slate-500 mt-1 block">
-              Ceiling for automatic complete tuition waiver
+              Ceiling declared for this scheme
             </span>
           </div>
 
           <div className="p-4 bg-brand-50/60 rounded-xl border border-brand-100">
-            <span className="text-brand-700 block text-[11px] font-semibold">Tier-2 Bracket (50% Waiver)</span>
+            <span className="text-brand-700 block text-[11px] font-semibold">Gap to Threshold</span>
             <span className="text-xl font-semibold font-mono text-brand-950 mt-1 block">
-              Up to ₹8,00,000 / yr
+              {overBy > 0 ? `${formatInr(overBy)} over` : `${formatInr(overBy)} under`}
             </span>
             <span className="text-[10px] text-brand-700 mt-1 block font-medium">
-              ✓ Fully eligible for 50% tuition reimbursement
+              A relaxation or deduction proof may still qualify you
             </span>
           </div>
         </div>
@@ -88,10 +91,10 @@ const BorderlineEligibilityView = ({ scheme }: BorderlineEligibilityViewProps) =
           </p>
           <ul className="list-disc pl-5 space-y-1 text-slate-600">
             <li>
-              <strong>Standard Bracket:</strong> At ₹2,10,000, you exceed the ₹2,00,000 cutoff by ₹10,000. Under automatic rule processing, this classifies you for <strong>50% tuition reimbursement</strong> rather than 100%.
+              <strong>Standard Bracket:</strong> At {formatInr(annualIncome)}, you {overBy > 0 ? `exceed the ${formatInr(scheme.maxIncomeLimit)} cutoff by ${formatInr(overBy)}` : `are within the ${formatInr(scheme.maxIncomeLimit)} cutoff`}. Under automatic rule processing, this affects which benefit tier applies.
             </li>
             <li>
-              <strong>Agricultural Income Computation Exception:</strong> If your family income includes dryland agriculture receipts from your 1.8-acre land holding, input expenditure (fertilizer/diesel bills) can be adjusted upon submission of an agricultural deduction affidavit.
+              <strong>Agricultural Income Computation Exception:</strong> If your family income includes agricultural receipts from any landholding, input expenditure (fertilizer/diesel bills) can be adjusted upon submission of an agricultural deduction affidavit.
             </li>
           </ul>
         </div>
@@ -143,7 +146,7 @@ const BorderlineEligibilityView = ({ scheme }: BorderlineEligibilityViewProps) =
               onClick={() => navigate(`/applications/new/${scheme.id}`)}
               className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-md transition-colors inline-flex items-center gap-1.5"
             >
-              <span>Apply for 50% Slab</span>
+              <span>Apply Anyway</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

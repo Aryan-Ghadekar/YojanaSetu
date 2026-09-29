@@ -35,30 +35,34 @@ const ApplicationFormAssistant = ({ scheme, onSubmit }: ApplicationFormAssistant
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
-    fullName: userProfile.fullName,
-    aadhaarNo: 'XXXX-XXXX-4921',
-    collegeName: 'COEP Technological University, Pune',
-    courseName: 'B.Tech in Computer Engineering (Semester 5)',
-    casteCertificateNo: 'SDO/PUN/2022/99104',
-    annualIncome: '210000',
-    incomeCertificateBarcode: 'MH-REV-2025-884129',
-    bankAccountNo: '60199482910',
-    ifscCode: 'MAHB0000412',
+    fullName: userProfile?.fullName ?? '',
+    aadhaarNo: '',
+    collegeName: '',
+    courseName: '',
+    casteCertificateNo: '',
+    annualIncome: String(userProfile?.annualIncome ?? ''),
+    incomeCertificateBarcode: '',
+    bankAccountNo: '',
+    ifscCode: '',
     hostelAllotted: 'No',
-    residentialDistanceKm: '42',
-    monthlyRentPaid: '4500',
+    residentialDistanceKm: '',
+    monthlyRentPaid: '',
     consentUndertaking: true,
   });
 
+  if (!userProfile) return null;
+
   const getCopilotFieldAdvice = () => {
     switch (activeFocusedField) {
-      case 'annualIncome':
+      case 'annualIncome': {
+        const incomeLabel = `₹${userProfile.annualIncome.toLocaleString('en-IN')}`;
         return {
           title: 'Annual Family Income',
-          advice: 'This field asks for your total gross annual parental income. Based on your uploaded Tehsildar Income Certificate (doc-income), the extracted value is ₹2,10,000.',
-          extractedValue: '₹2,10,000',
-          ruleReason: 'The Swadhar Scheme income ceiling is ₹2,50,000. Entering ₹2,10,000 fully complies with Maharashtra Social Justice norms.',
+          advice: `This field asks for your total gross annual parental income. Based on your citizen profile, the recorded value is ${incomeLabel}.`,
+          extractedValue: incomeLabel,
+          ruleReason: `Cross-check this against the scheme's declared income ceiling before submitting.`,
         };
+      }
       case 'hostelAllotted':
         return {
           title: 'Hostel Allotment Declaration',
@@ -441,11 +445,12 @@ const ApplicationFormAssistant = ({ scheme, onSubmit }: ApplicationFormAssistant
                 type="button"
                 onClick={() => {
                   if (activeFocusedField === 'annualIncome') {
-                    setFormData((prev) => ({ ...prev, annualIncome: '210000' }));
+                    const income = String(userProfile.annualIncome);
+                    setFormData((prev) => ({ ...prev, annualIncome: income }));
                     addNotification({
                       type: 'success',
                       title: 'Extracted Value Applied',
-                      message: 'Filled ₹2,10,000 from verified Tehsildar Income Certificate.',
+                      message: `Filled ₹${userProfile.annualIncome.toLocaleString('en-IN')} from your verified profile.`,
                     });
                   }
                 }}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Filter, ArrowLeft, Download, CheckCircle2 } from 'lucide-react';
 import {
@@ -12,37 +12,25 @@ import {
   Tooltip,
   CartesianGrid,
 } from 'recharts';
-
-const monthlyAppTrend = [
-  { month: 'Apr 26', apps: 420000, approved: 350000 },
-  { month: 'May 26', apps: 510000, approved: 430000 },
-  { month: 'Jun 26', apps: 680000, approved: 580000 },
-  { month: 'Jul 26', apps: 920000, approved: 780000 },
-  { month: 'Aug 26', apps: 1150000, approved: 970000 },
-  { month: 'Sep 26', apps: 1340000, approved: 1140000 },
-];
-
-const rejectionReasons = [
-  { reason: 'Missing / Blurry Income Certificate', count: 42, color: '#EF4444' },
-  { reason: 'Aadhaar-NPCI Bank Seeding Failed', count: 26, color: '#F59E0B' },
-  { reason: 'Hostel Undertaking Not Signed', count: 18, color: '#8B5CF6' },
-  { reason: 'Income Threshold Exceeded (>₹2.5L)', count: 9, color: '#3B82F6' },
-  { reason: 'Duplicate Application / CAP Mismatch', count: 5, color: '#64748B' },
-];
-
-const dropOffFunnel = [
-  { stage: '1. Scheme Viewed', count: 100, label: '100% (2.4M)' },
-  { stage: '2. Eligibility Checked', count: 78, label: '78% (1.87M)' },
-  { stage: '3. Documents Ingested', count: 58, label: '58% (1.39M)' },
-  { stage: '4. Form Completed', count: 44, label: '44% (1.05M)' },
-  { stage: '5. Successfully Submitted', count: 39, label: '39% (936k)' },
-];
+import type { UtilizationAnalytics } from './types';
+import { fetchUtilizationAnalytics } from './api';
 
 const SchemeUtilizationAnalytics = () => {
   const navigate = useNavigate();
 
   const [filterScheme, setFilterScheme] = useState('All Schemes');
   const [filterDistrict, setFilterDistrict] = useState('All Maharashtra');
+  const [analytics, setAnalytics] = useState<UtilizationAnalytics | null>(null);
+
+  useEffect(() => {
+    fetchUtilizationAnalytics().then(setAnalytics);
+  }, []);
+
+  if (!analytics) return null;
+
+  const { monthlyTrend, rejectionReasons, dropOffFunnel } = analytics;
+  const topReason = rejectionReasons[0];
+  const secondReason = rejectionReasons[1];
 
   return (
     <div className="space-y-8 pb-12 max-w-6xl mx-auto">
@@ -121,7 +109,7 @@ const SchemeUtilizationAnalytics = () => {
             <span>Document Incompleteness Trend</span>
           </div>
           <p className="text-amber-950/80 leading-relaxed text-[11px]">
-            <strong>42% of incomplete applications</strong> are missing valid Tehsildar income certificates or stalled by slight camera glare.
+            <strong>{topReason.count}% of incomplete applications</strong> cite "{topReason.reason}" as the leading rejection cause.
           </p>
         </div>
 
@@ -131,7 +119,7 @@ const SchemeUtilizationAnalytics = () => {
             <span>Bank Aadhaar-Seeding Rejections</span>
           </div>
           <p className="text-rose-950/80 leading-relaxed text-[11px]">
-            <strong>26% of payment failures</strong> occur because applicant bank accounts are not mapped to the NPCI PFMS server.
+            <strong>{secondReason.count}% of payment failures</strong> are attributed to "{secondReason.reason}".
           </p>
         </div>
 
@@ -175,7 +163,7 @@ const SchemeUtilizationAnalytics = () => {
 
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyAppTrend} margin={{ left: -10, right: 10, top: 10, bottom: 10 }}>
+              <AreaChart data={monthlyTrend} margin={{ left: -10, right: 10, top: 10, bottom: 10 }}>
                 <defs>
                   <linearGradient id="colorApps" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2} />

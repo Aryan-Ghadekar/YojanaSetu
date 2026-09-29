@@ -22,7 +22,7 @@ const SchemeDetails = () => {
     });
   }, [schemeId]);
 
-  if (!scheme) return null;
+  if (!scheme || !userProfile) return null;
 
   return (
     <SchemeDetailsView
