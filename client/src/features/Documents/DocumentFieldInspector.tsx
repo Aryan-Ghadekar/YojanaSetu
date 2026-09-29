@@ -5,6 +5,7 @@ import type { Column } from '../../components/Tables/DataTable';
 import {
   CheckCircle2,
   AlertTriangle,
+  XCircle,
   Edit2,
   Check,
   X,
@@ -131,9 +132,26 @@ const DocumentFieldInspector = ({ doc, onSaveField, onAuditSignals, onUseInAppli
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
         <div className="p-2.5 bg-slate-50 rounded-lg">
           <span className="text-[10px] text-slate-600 block">OCR Processing</span>
-          <span className="font-semibold text-slate-900 mt-0.5 flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Complete</span>
+          <span className={`font-semibold mt-0.5 flex items-center gap-1 ${
+            doc.ocrStatus === 'complete' ? 'text-emerald-700' :
+            doc.ocrStatus === 'processing' ? 'text-amber-700' : 'text-rose-700'
+          }`}>
+            {doc.ocrStatus === 'complete' ? (
+              <>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Complete</span>
+              </>
+            ) : doc.ocrStatus === 'processing' ? (
+              <>
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                <span>Processing</span>
+              </>
+            ) : (
+              <>
+                <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                <span>Failed</span>
+              </>
+            )}
           </span>
         </div>
 
